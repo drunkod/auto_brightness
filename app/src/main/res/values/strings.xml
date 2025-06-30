@@ -9,4 +9,6 @@
     <string name="notification">Notification</string>
     <string name="persistentNotification">Persistent notification</string>
     <string name="showNodeList">Show node list</string>
+    <string name="nodeSaved">Node saved</string>
+    <string name="brightnessSetToAuto">Brightness was set to auto</string>
 </resources>

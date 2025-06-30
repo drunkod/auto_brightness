@@ -10,6 +10,7 @@ private const val NODE_FIELD_SEP = ";"
 const val NODE_COUNT = 20
 //const val MAX_SENSOR_VALUE = 1000
 const val MAX_BRIGHTNESS = 255
+const val MIN_BRIGHTNESS = 0
 class NodeList(private val mMaxSensorValue: Int) {
     class Node {
         constructor(sensorValue: Int, brightness: Int) {

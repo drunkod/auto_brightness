@@ -15,7 +15,10 @@ import android.widget.Button
 import android.widget.SeekBar
 import android.widget.SeekBar.OnSeekBarChangeListener
 import android.widget.TextView
+import android.widget.Toast
+import kotlin.math.sqrt
 
+const val MAX_BRIGHTNESS_SEEKBAR = 255.0
 
 class MainActivity : SensorEventListener, Activity()  {
     //private lateinit var mBrightness: Brightness
@@ -52,7 +55,7 @@ class MainActivity : SensorEventListener, Activity()  {
             override fun onProgressChanged(seekBar: SeekBar?, progress: Int, fromUser: Boolean) {
                 if ( mIsUpdatingGUI )
                     return
-                setBrightness( seekBar!!.progress )
+                setBrightness( seekBarToBrightness( seekBar!!.progress ) )
             }
             override fun onStartTrackingTouch(seekBar: SeekBar?) {
             }
@@ -67,18 +70,20 @@ class MainActivity : SensorEventListener, Activity()  {
         findViewById<Button>(R.id.btnSave ).setOnClickListener {
             MainApplication.mNodeList.set(mSensorValue, getBrightness())
             updateGUI()
+            Toast.makeText( this, R.string.nodeSaved, Toast.LENGTH_SHORT ).show()
         }
         findViewById<Button>(R.id.btnAuto ).setOnClickListener {
             setBrightness( MainApplication.mNodeList.getBrightness( mSensorValue ) )
             updateGUI()
+            Toast.makeText( this, R.string.brightnessSetToAuto, Toast.LENGTH_SHORT ).show()
         }
         updateGUI()
     }
     private fun updateGUI() {
         mIsUpdatingGUI = true
         mNodeListText.text = if ( mIsNodeListVisible ) MainApplication.mNodeList.getString() else getString( R.string.showNodeList )
-        mBrightnessSlider.progress = getBrightness()
-        mBrightnessText.text = getString(R.string.brightness) + ": " + mBrightnessSlider.progress
+        mBrightnessSlider.progress = brightnessToSeekBar( getBrightness() )
+        mBrightnessText.text = getString(R.string.brightness) + ": " + seekBarToBrightness( mBrightnessSlider.progress )
         mSensorValueText.text = getString(R.string.sensorData) + ": " + mSensorValue.toString()
         mIsUpdatingGUI = false
     }
@@ -86,7 +91,7 @@ class MainActivity : SensorEventListener, Activity()  {
         super.onResume()
         mSensorManager.registerListener(this, mLightSensor, SensorManager.SENSOR_DELAY_NORMAL)
         mNeedToSetBrigtness = true
-        mBrightnessSlider.progress = getBrightness()
+        mBrightnessSlider.progress = brightnessToSeekBar( getBrightness() )
         updateGUI()
     }
 
@@ -120,5 +125,14 @@ class MainActivity : SensorEventListener, Activity()  {
         } else
             mErrorText.visibility = View.VISIBLE
             mErrorText.text = getString(R.string.permissionNotGranted_WRITE_SETTINGS)
+    }
+
+    fun seekBarToBrightness( progress: Int ): Int {
+        return (((progress * progress) /  (MAX_BRIGHTNESS_SEEKBAR * MAX_BRIGHTNESS_SEEKBAR)) *
+                (MAX_BRIGHTNESS - MIN_BRIGHTNESS).toFloat() + MIN_BRIGHTNESS.toFloat()).toInt() // Approximate an exponential curve with x^2.
+    }
+    fun brightnessToSeekBar( brightness: Int ): Int {
+        return (sqrt(((brightness - MIN_BRIGHTNESS) / (MAX_BRIGHTNESS - MIN_BRIGHTNESS).toFloat())
+                * MAX_BRIGHTNESS_SEEKBAR * MAX_BRIGHTNESS_SEEKBAR)).toInt()
     }
 }
