@@ -15,7 +15,6 @@ import android.widget.Button
 import android.widget.SeekBar
 import android.widget.SeekBar.OnSeekBarChangeListener
 import android.widget.TextView
-import android.widget.Toast
 
 
 class MainActivity : SensorEventListener, Activity()  {
@@ -28,12 +27,13 @@ class MainActivity : SensorEventListener, Activity()  {
     private lateinit var mBrightnessSlider: SeekBar
     private lateinit var mNodeListText: TextView
     private lateinit var mErrorText: TextView
-    private var mNodeList: NodeList? = null
     private var mNeedToSetBrigtness = true
     private var mIsUpdatingGUI = false
+    private var mIsNodeListVisible = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        requestWindowFeature(Window.FEATURE_NO_TITLE);
         setContentView(R.layout.activity)
         mSensorManager = getSystemService(SENSOR_SERVICE) as SensorManager
         mLightSensor = mSensorManager.getDefaultSensor(Sensor.TYPE_LIGHT)!!
@@ -60,22 +60,23 @@ class MainActivity : SensorEventListener, Activity()  {
             }
         } )
         mNodeListText = findViewById(R.id.nodeListInfo)
+        mNodeListText.setOnClickListener {
+            mIsNodeListVisible = !mIsNodeListVisible
+            updateGUI()
+        }
         findViewById<Button>(R.id.btnSave ).setOnClickListener {
-            mNodeList!!.set(mSensorValue, getBrightness())
+            MainApplication.mNodeList.set(mSensorValue, getBrightness())
             updateGUI()
         }
         findViewById<Button>(R.id.btnAuto ).setOnClickListener {
-            setBrightness( mNodeList!!.getBrightness( mSensorValue ) )
+            setBrightness( MainApplication.mNodeList.getBrightness( mSensorValue ) )
             updateGUI()
         }
-
         updateGUI()
     }
     private fun updateGUI() {
-        if ( mNodeList == null )
-            return
         mIsUpdatingGUI = true
-        mNodeListText.text = mNodeList!!.getString()
+        mNodeListText.text = if ( mIsNodeListVisible ) MainApplication.mNodeList.getString() else getString( R.string.showNodeList )
         mBrightnessSlider.progress = getBrightness()
         mBrightnessText.text = getString(R.string.brightness) + ": " + mBrightnessSlider.progress
         mSensorValueText.text = getString(R.string.sensorData) + ": " + mSensorValue.toString()
@@ -89,12 +90,16 @@ class MainActivity : SensorEventListener, Activity()  {
         updateGUI()
     }
 
+    override fun onPause() {
+        mSensorManager.unregisterListener( this )
+        super.onPause()
+    }
+
     override fun onSensorChanged(event: SensorEvent?) {
         if( event != null && event.sensor.type == Sensor.TYPE_LIGHT ) {
             mSensorValue = event.values[0].toInt()
             if ( mNeedToSetBrigtness ) {
-                mNodeList = NodeList(mLightSensor.maximumRange.toInt())
-                setBrightness( mNodeList!!.getBrightness(mSensorValue) )
+                setBrightness(MainApplication.mNodeList.getBrightness(mSensorValue) )
             }
             mNeedToSetBrigtness = false
             updateGUI()
@@ -109,11 +114,7 @@ class MainActivity : SensorEventListener, Activity()  {
 
     fun setBrightness(value: Int) {
         if ( Settings.System.canWrite(this) ) {
-            Settings.System.putInt(
-                contentResolver,
-                Settings.System.SCREEN_BRIGHTNESS,
-                value
-            )
+            MainService.Companion.setBrightness( value )
             mErrorText.text = ""
             mErrorText.visibility = View.GONE
         } else

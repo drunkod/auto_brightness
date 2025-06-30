@@ -1,9 +1,12 @@
 <resources>
     <string name="app_name">Auto Brightness</string>
-    <string name="sensorData">Sensor data</string>
+    <string name="sensorData">Sensor</string>
     <string name="auto">Auto</string>
     <string name="save">Save</string>
     <string name="brightness">Brightness</string>
     <string name="permissionNotGranted_WRITE_SETTINGS">WRITE_SETTINGS permission not granted</string>
     <string name="service">Service</string>
+    <string name="notification">Notification</string>
+    <string name="persistentNotification">Persistent notification</string>
+    <string name="showNodeList">Show node list</string>
 </resources>
