@@ -9,7 +9,7 @@ android {
     compileSdk = 35
 
     defaultConfig {
-        applicationId = "com.example.myapplication"
+        applicationId = "ru.yanus171.android.autobrightness"
         minSdk = 24
         targetSdk = 35
         versionCode = 1
@@ -34,7 +34,7 @@ android {
     kotlinOptions {
         jvmTarget = "11"
     }
-    buildFeatures+ {
+    buildFeatures {
         compose = true
     }
 }

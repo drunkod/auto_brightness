@@ -5,6 +5,22 @@
     android:layout_height="match_parent"
     android:layout_gravity="center">
 
+    <TextView
+        android:id="@+id/nodeListInfo"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text=""/>
+
+    <TextView
+        android:id="@+id/errorText"
+        android:textColor="@android:color/white"
+        android:background="@android:color/holo_red_dark"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center"
+        android:gravity="center"
+        android:text=""/>
+
     <LinearLayout android:orientation="horizontal"
         android:layout_width="wrap_content"
         android:layout_gravity="center_horizontal"
@@ -15,16 +31,22 @@
             android:layout_height="wrap_content"
             android:layout_width="wrap_content"
             android:padding="10dp"/>
-        <TextView
-            android:id="@+id/sensorData"
-            android:layout_width="match_parent"
+        <LinearLayout android:orientation="vertical"
+            android:layout_width="wrap_content"
+            android:layout_gravity="center_horizontal"
             android:layout_height="wrap_content"
-            android:text="@string/sensorData"/>
-        <TextView
-            android:id="@+id/brightness"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="@string/brightness"/>
+            android:padding="10dp">
+            <TextView
+                android:id="@+id/sensorData"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/sensorData"/>
+            <TextView
+                android:id="@+id/brightness"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/brightness"/>
+        </LinearLayout>
         <Button android:id="@+id/btnSave"
             android:text="@string/save"
             android:layout_height="wrap_content"

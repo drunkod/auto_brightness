@@ -5,4 +5,5 @@
     <string name="save">Save</string>
     <string name="brightness">Brightness</string>
     <string name="permissionNotGranted_WRITE_SETTINGS">WRITE_SETTINGS permission not granted</string>
+    <string name="service">Service</string>
 </resources>
