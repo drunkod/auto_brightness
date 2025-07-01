@@ -10,18 +10,21 @@ import android.net.Uri
 import android.os.Bundle
 import android.provider.Settings
 import android.view.View
+import android.view.ViewGroup.LayoutParams
 import android.view.Window
+import android.view.WindowManager
 import android.widget.Button
 import android.widget.SeekBar
 import android.widget.SeekBar.OnSeekBarChangeListener
 import android.widget.TextView
 import android.widget.Toast
+import androidx.appcompat.app.ActionBar
+import androidx.appcompat.app.AppCompatActivity
 import kotlin.math.sqrt
 
 const val MAX_BRIGHTNESS_SEEKBAR = 255.0
 
-class MainActivity : SensorEventListener, Activity()  {
-    //private lateinit var mBrightness: Brightness
+class MainActivity : SensorEventListener, AppCompatActivity()  {
     private var mSensorValue: Int = 0
     private lateinit var mSensorValueText: TextView
     private lateinit var mBrightnessText: TextView
@@ -36,17 +39,16 @@ class MainActivity : SensorEventListener, Activity()  {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        requestWindowFeature(Window.FEATURE_NO_TITLE);
+        requestWindowFeature(Window.FEATURE_NO_TITLE)
         setContentView(R.layout.activity)
+        //window.addFlags(WindowManager.LayoutParams.FLAG_FORCE_NOT_FULLSCREEN )
         mSensorManager = getSystemService(SENSOR_SERVICE) as SensorManager
         mLightSensor = mSensorManager.getDefaultSensor(Sensor.TYPE_LIGHT)!!
-        //mBrightness = Brightness( this )
         mErrorText = findViewById(R.id.errorText)
         mErrorText.setOnClickListener {
-            val intent = Intent(android.provider.Settings.ACTION_MANAGE_WRITE_SETTINGS);
+            val intent = Intent(Settings.ACTION_MANAGE_WRITE_SETTINGS)
             intent.setFlags( Intent.FLAG_ACTIVITY_NEW_TASK )
-            //intent.setData(Uri.parse("package:dummy"));
-            startActivity(intent);
+            startActivity(intent)
         }
         mSensorValueText = findViewById(R.id.sensorData)
         mBrightnessText = findViewById(R.id.brightness)
