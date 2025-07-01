@@ -124,9 +124,10 @@ class MainActivity : SensorEventListener, AppCompatActivity()  {
             MainService.Companion.setBrightness( value )
             mErrorText.text = ""
             mErrorText.visibility = View.GONE
-        } else
+        } else {
             mErrorText.visibility = View.VISIBLE
             mErrorText.text = getString(R.string.permissionNotGranted_WRITE_SETTINGS)
+        }
     }
 
     fun seekBarToBrightness( progress: Int ): Int {
