@@ -16,7 +16,6 @@ import android.hardware.SensorManager
 import android.os.Build
 import android.os.IBinder
 import android.provider.Settings
-import android.widget.Toast
 import androidx.core.app.NotificationCompat
 import ru.yanus171.android.autobrightness.MainService.Companion.setBrightness
 
@@ -86,6 +85,7 @@ class MainService : Service(), SensorEventListener {
 }
 
 class Receiver() : BroadcastReceiver(), SensorEventListener {
+    private val mSensorValue = SensorValue()
     lateinit var mSensorManager: SensorManager
     override fun onReceive(context: Context?, intent: Intent?) {
         if ( intent == null )
@@ -98,8 +98,9 @@ class Receiver() : BroadcastReceiver(), SensorEventListener {
     }
 
     override fun onSensorChanged(event: SensorEvent?) {
-        val sensorValue = event!!.values[0].toInt()
-        val brightness = MainApplication.mNodeList.getBrightness( sensorValue )
+        if ( !mSensorValue.ready( event!!) )
+            return
+        val brightness = MainApplication.mNodeList.getBrightness( mSensorValue.get() )
         setBrightness( brightness)
         //Toast.makeText(MainApplication.context, "Brightness $brightness was set for sensor value $sensorValue", Toast.LENGTH_SHORT ).show()
         mSensorManager.unregisterListener( this )

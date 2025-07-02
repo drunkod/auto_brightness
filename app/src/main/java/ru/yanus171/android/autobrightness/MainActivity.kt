@@ -1,31 +1,26 @@
 package ru.yanus171.android.autobrightness
 
-import android.app.Activity
 import android.content.Intent
 import android.hardware.Sensor
 import android.hardware.SensorEvent
 import android.hardware.SensorEventListener
 import android.hardware.SensorManager
-import android.net.Uri
 import android.os.Bundle
 import android.provider.Settings
 import android.view.View
-import android.view.ViewGroup.LayoutParams
 import android.view.Window
-import android.view.WindowManager
 import android.widget.Button
 import android.widget.SeekBar
 import android.widget.SeekBar.OnSeekBarChangeListener
 import android.widget.TextView
 import android.widget.Toast
-import androidx.appcompat.app.ActionBar
 import androidx.appcompat.app.AppCompatActivity
 import kotlin.math.sqrt
 
 const val MAX_BRIGHTNESS_SEEKBAR = 255.0
 
 class MainActivity : SensorEventListener, AppCompatActivity()  {
-    private var mSensorValue: Int = 0
+    private val mSensorValue = SensorValue()
     private lateinit var mSensorValueText: TextView
     private lateinit var mBrightnessText: TextView
     private lateinit var mSensorManager: SensorManager
@@ -58,6 +53,7 @@ class MainActivity : SensorEventListener, AppCompatActivity()  {
                 if ( mIsUpdatingGUI )
                     return
                 setBrightness( seekBarToBrightness( seekBar!!.progress ) )
+                updateGUI()
             }
             override fun onStartTrackingTouch(seekBar: SeekBar?) {
             }
@@ -70,12 +66,12 @@ class MainActivity : SensorEventListener, AppCompatActivity()  {
             updateGUI()
         }
         findViewById<Button>(R.id.btnSave ).setOnClickListener {
-            MainApplication.mNodeList.set(mSensorValue, getBrightness())
+            MainApplication.mNodeList.set(mSensorValue.get(), getBrightness())
             updateGUI()
             Toast.makeText( this, R.string.nodeSaved, Toast.LENGTH_SHORT ).show()
         }
         findViewById<Button>(R.id.btnAuto ).setOnClickListener {
-            setBrightness( MainApplication.mNodeList.getBrightness( mSensorValue ) )
+            setBrightness( MainApplication.mNodeList.getBrightness( mSensorValue.get() ) )
             updateGUI()
             Toast.makeText( this, R.string.brightnessSetToAuto, Toast.LENGTH_SHORT ).show()
         }
@@ -86,7 +82,7 @@ class MainActivity : SensorEventListener, AppCompatActivity()  {
         mNodeListText.text = if ( mIsNodeListVisible ) MainApplication.mNodeList.getString() else getString( R.string.showNodeList )
         mBrightnessSlider.progress = brightnessToSeekBar( getBrightness() )
         mBrightnessText.text = getString(R.string.brightness) + ": " + seekBarToBrightness( mBrightnessSlider.progress )
-        mSensorValueText.text = getString(R.string.sensorData) + ": " + mSensorValue.toString()
+        mSensorValueText.text = getString(R.string.sensorData) + ": " + mSensorValue.get().toString()
         mIsUpdatingGUI = false
     }
     override fun onResume() {
@@ -102,16 +98,19 @@ class MainActivity : SensorEventListener, AppCompatActivity()  {
         super.onPause()
     }
 
+
     override fun onSensorChanged(event: SensorEvent?) {
         if( event != null && event.sensor.type == Sensor.TYPE_LIGHT ) {
-            mSensorValue = event.values[0].toInt()
-            if ( mNeedToSetBrigtness ) {
-                setBrightness(MainApplication.mNodeList.getBrightness(mSensorValue) )
-            }
+            if ( !mSensorValue.ready( event ) )
+                return
+            if ( mNeedToSetBrigtness )
+                setBrightness(MainApplication.mNodeList.getBrightness(mSensorValue.get()) )
             mNeedToSetBrigtness = false
             updateGUI()
         }
     }
+
+
     override fun onAccuracyChanged(sensor: Sensor?, accuracy: Int) {
     }
 
@@ -132,7 +131,7 @@ class MainActivity : SensorEventListener, AppCompatActivity()  {
 
     fun seekBarToBrightness( progress: Int ): Int {
         return (((progress * progress) /  (MAX_BRIGHTNESS_SEEKBAR * MAX_BRIGHTNESS_SEEKBAR)) *
-                (MAX_BRIGHTNESS - MIN_BRIGHTNESS).toFloat() + MIN_BRIGHTNESS.toFloat()).toInt() // Approximate an exponential curve with x^2.
+                (MAX_BRIGHTNESS - MIN_BRIGHTNESS).toFloat() + MIN_BRIGHTNESS.toFloat()).toInt() + 1 // Approximate an exponential curve with x^2.
     }
     fun brightnessToSeekBar( brightness: Int ): Int {
         return (sqrt(((brightness - MIN_BRIGHTNESS) / (MAX_BRIGHTNESS - MIN_BRIGHTNESS).toFloat())
