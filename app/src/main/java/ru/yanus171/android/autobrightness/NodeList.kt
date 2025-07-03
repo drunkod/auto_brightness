@@ -4,7 +4,7 @@ import android.preference.PreferenceManager
 import android.text.TextUtils
 import androidx.core.content.edit
 
-private const val NODE_LIST_PREF = "node_list3"
+private const val NODE_LIST_PREF = "node_list5"
 private const val NODE_SEP = "|"
 private const val NODE_FIELD_SEP = ";"
 const val NODE_COUNT = 20
@@ -50,18 +50,16 @@ class NodeList(private val mMaxSensorValue: Int) {
 
     private fun createDefaultList() {
         val bStep = MAX_BRIGHTNESS / NODE_COUNT
-        val sStep = getSensorStep()
         var b = 0
-        var s = 0
+        var s = 10
         mList.clear()
         while (s < mMaxSensorValue) {
-            s += sStep
+            s = (s * 1.5).toInt()
             b += bStep
             mList += Node(s, b)
         }
     }
 
-    private fun getSensorStep(): Int = mMaxSensorValue / NODE_COUNT
     fun getBrightness(sensorValue: Int): Int {
         for (node in mList)
             if (sensorValue < node.mSensorValue)
