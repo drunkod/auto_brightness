@@ -10,6 +10,7 @@ private const val NODE_FIELD_SEP = ";"
 const val NODE_COUNT = 20
 const val MAX_BRIGHTNESS = 255
 const val MIN_BRIGHTNESS = 0
+const val SENSOR_STEP_COEFF = 1.5
 class NodeList(private val mMaxSensorValue: Int) {
     class Node {
         constructor(sensorValue: Int, brightness: Int) {
@@ -67,7 +68,18 @@ class NodeList(private val mMaxSensorValue: Int) {
         return MAX_BRIGHTNESS
     }
 
+    fun addNodesTo(maxSensorValue: Int ) {
+        var sensorValue = mList.last().mSensorValue
+        val brightness = mList.last().mBrightness
+        while ( sensorValue < maxSensorValue ) {
+            sensorValue = (sensorValue * SENSOR_STEP_COEFF).toInt()
+            mList += Node( sensorValue, brightness )
+        }
+    }
+
     fun set(sensorValue: Int, newBrightness: Int) {
+        if ( sensorValue > mList.last().mSensorValue )
+            addNodesTo( sensorValue )
         val iterator = mList.listIterator()
         for (it in iterator) {
             if (sensorValue < it.mSensorValue) {
