@@ -80,14 +80,25 @@ class NodeList(private val mMaxSensorValue: Int) {
     fun set(sensorValue: Int, newBrightness: Int) {
         if ( sensorValue > mList.last().mSensorValue )
             addNodesTo( sensorValue )
-        val iterator = mList.listIterator()
-        for (it in iterator) {
+        for (it in mList)
             if (sensorValue < it.mSensorValue) {
-                iterator.set(Node(it.mSensorValue, newBrightness))
+                it.mBrightness = newBrightness
+                makePrevNonesNotBrighterThen( it )
+                makeNextNonesNotDarkerThen( it )
                 break
             }
-        }
         save()
+    }
+
+    private fun makePrevNonesNotBrighterThen( node: Node ) {
+        for (it in mList.reversed())
+            if ( it.mSensorValue < node.mSensorValue && it.mBrightness > node.mBrightness )
+                it.mBrightness = node.mBrightness
+    }
+    private fun makeNextNonesNotDarkerThen( node: Node ) {
+        for (it in mList)
+            if ( it.mSensorValue > node.mSensorValue && it.mBrightness < node.mBrightness )
+                it.mBrightness = node.mBrightness
     }
 
     fun getString(): String {
