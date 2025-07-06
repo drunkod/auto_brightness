@@ -16,10 +16,12 @@ import android.hardware.SensorManager
 import android.os.Build
 import android.os.IBinder
 import android.provider.Settings
+import android.widget.Toast
 import androidx.core.app.NotificationCompat
 import ru.yanus171.android.autobrightness.MainService.Companion.setBrightness
 
 const val SERVICE_NOTIFICATION_CHANNEL_ID = "service"
+const val OPER_COUNT = 20
 
 class MainService : Service(), SensorEventListener {
     var mNodeList: NodeList? = null
@@ -76,7 +78,7 @@ class MainService : Service(), SensorEventListener {
         fun setBrightness(value: Int) {
             if ( Settings.System.canWrite(MainApplication.context) )
                 Settings.System.putInt(
-                    MainApplication.context!!.contentResolver,
+                    MainApplication.context.contentResolver,
                     Settings.System.SCREEN_BRIGHTNESS,
                     value
                 )
@@ -87,6 +89,7 @@ class MainService : Service(), SensorEventListener {
 class Receiver() : BroadcastReceiver(), SensorEventListener {
     private val mSensorValue = SensorValue()
     lateinit var mSensorManager: SensorManager
+    var mOperNum = 0
     override fun onReceive(context: Context?, intent: Intent?) {
         if ( intent == null )
             return
@@ -102,8 +105,12 @@ class Receiver() : BroadcastReceiver(), SensorEventListener {
             return
         val brightness = MainApplication.mNodeList.getBrightness( mSensorValue.get() )
         setBrightness( brightness)
-        //Toast.makeText(MainApplication.context, "Brightness $brightness was set for sensor value $sensorValue", Toast.LENGTH_SHORT ).show()
-        mSensorManager.unregisterListener( this )
+        //Toast.makeText(MainApplication.context, "Oper ${mOperNum}: Brightness $brightness was set for sensor value ${mSensorValue.toString()}", Toast.LENGTH_SHORT ).show()
+        if ( mOperNum >= OPER_COUNT ) {
+            mOperNum = 0
+            mSensorManager.unregisterListener( this )
+        } else
+            mOperNum++
     }
 
     override fun onAccuracyChanged(sensor: Sensor?, accuracy: Int) {

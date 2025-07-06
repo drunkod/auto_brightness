@@ -79,10 +79,10 @@ class MainActivity : SensorEventListener, AppCompatActivity()  {
     }
     private fun updateGUI() {
         mIsUpdatingGUI = true
-        mNodeListText.text = if ( mIsNodeListVisible ) MainApplication.mNodeList.getString() else getString( R.string.showNodeList )
+        mNodeListText.text = if ( mIsNodeListVisible && mSensorValue.hasValue() ) MainApplication.mNodeList.getString( mSensorValue.toInt() ) else getString( R.string.showNodeList )
         mBrightnessSlider.progress = brightnessToSeekBar( getBrightness() )
-        mBrightnessText.text = getString(R.string.brightness) + ": " + seekBarToBrightness( mBrightnessSlider.progress )
-        mSensorValueText.text = getString(R.string.sensorData) + ": " + mSensorValue.get().toString()
+        mBrightnessText.text = getString(R.string.brightness, getBrightness() )
+        mSensorValueText.text = getString(R.string.sensorData, mSensorValue)
         mIsUpdatingGUI = false
     }
     override fun onResume() {

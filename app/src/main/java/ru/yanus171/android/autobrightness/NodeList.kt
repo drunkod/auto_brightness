@@ -62,11 +62,18 @@ class NodeList(private val mMaxSensorValue: Int) {
     }
 
     fun getBrightness(sensorValue: Int): Int {
-        for (node in mList)
-            if (sensorValue < node.mSensorValue)
-                return node.mBrightness
+        val node = getNodeFor( sensorValue )
+        if ( node != null )
+            return node.mBrightness
         return MAX_BRIGHTNESS
     }
+    private fun getNodeFor(sensorValue: Int): Node? {
+        for (node in mList)
+            if ( sensorValue < node.mSensorValue )
+                return node
+        return null
+    }
+
 
     fun addNodesTo(maxSensorValue: Int ) {
         var sensorValue = mList.last().mSensorValue
@@ -100,11 +107,13 @@ class NodeList(private val mMaxSensorValue: Int) {
             if ( it.mSensorValue > node.mSensorValue && it.mBrightness < node.mBrightness )
                 it.mBrightness = node.mBrightness
     }
-
-    fun getString(): String {
+    fun getString( sensorValue: Int ): String {
+        val currentNode = getNodeFor( sensorValue )
         var result = mutableListOf<String>()
-        for (node in mList)
-            result += node.getString()
+        for (node in mList) {
+            val currentText = if ( currentNode != null && currentNode.mSensorValue == node.mSensorValue ) "* " else ""
+            result += (currentText + node.getString())
+        }
         return TextUtils.join("\n", result)
     }
 
