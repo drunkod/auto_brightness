@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Автояркость</string>
+    <string name="sensorData">Сенсор: %s</string>
+    <string name="auto">Авто</string>
+    <string name="save">Сохранить</string>
+    <string name="brightness">Яркость: %d</string>
+    <string name="permissionNotGranted_WRITE_SETTINGS">Не предоставлено разрешение Изменения системных настроек</string>
+    <string name="service">Служба</string>
+    <string name="notification">Уведомление</string>
+    <string name="persistentNotification">Persistent notification</string>
+    <string name="showNodeList">Показать текущие уровни яркости</string>
+    <string name="nodeSaved">Значение сохранено</string>
+    <string name="brightnessSetToAuto">Автоматическая яркость установлена</string>
+    <string name="calculating">Расчет…</string>
+</resources>

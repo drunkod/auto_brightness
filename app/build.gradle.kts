@@ -15,7 +15,7 @@ android {
         versionCode = 1
         versionName = "1.0"
 
-        testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+        //testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
     buildTypes {
@@ -37,6 +37,16 @@ android {
     buildFeatures {
         compose = true
     }
+
+
+    flavorDimensions += "version"
+    productFlavors {
+        create("free") {
+            dimension = "version"
+            setProperty("archivesBaseName", "autobrightness")
+        }
+
+    }
 }
 
 dependencies {
@@ -50,11 +60,11 @@ dependencies {
     implementation(libs.androidx.ui.tooling.preview)
     implementation(libs.androidx.material3)
     implementation(libs.material)
-    testImplementation(libs.junit)
-    androidTestImplementation(libs.androidx.junit)
-    androidTestImplementation(libs.androidx.espresso.core)
+    //testImplementation(libs.junit)
+    //androidTestImplementation(libs.androidx.junit)
+    //androidTestImplementation(libs.androidx.espresso.core)
     androidTestImplementation(platform(libs.androidx.compose.bom))
-    androidTestImplementation(libs.androidx.ui.test.junit4)
+    //androidTestImplementation(libs.androidx.ui.test.junit4)
     debugImplementation(libs.androidx.ui.tooling)
-    debugImplementation(libs.androidx.ui.test.manifest)
+    //debugImplementation(libs.androidx.ui.test.manifest)
 }
