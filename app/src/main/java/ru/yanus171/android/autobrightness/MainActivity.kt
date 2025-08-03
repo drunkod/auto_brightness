@@ -10,6 +10,7 @@ import android.provider.Settings
 import android.view.View
 import android.view.Window
 import android.widget.Button
+import android.widget.ScrollView
 import android.widget.SeekBar
 import android.widget.SeekBar.OnSeekBarChangeListener
 import android.widget.TextView
@@ -24,7 +25,7 @@ class MainActivity : SensorEventListener, AppCompatActivity()  {
     private lateinit var mSensorValueText: TextView
     private lateinit var mBrightnessText: TextView
     private lateinit var mSensorManager: SensorManager
-    private lateinit var mLightSensor: Sensor
+    private var mLightSensor: Sensor? = null
     private lateinit var mBrightnessSlider: SeekBar
     private lateinit var mNodeListText: TextView
     private lateinit var mErrorText: TextView
@@ -38,7 +39,7 @@ class MainActivity : SensorEventListener, AppCompatActivity()  {
         setContentView(R.layout.activity)
         //window.addFlags(WindowManager.LayoutParams.FLAG_FORCE_NOT_FULLSCREEN )
         mSensorManager = getSystemService(SENSOR_SERVICE) as SensorManager
-        mLightSensor = mSensorManager.getDefaultSensor(Sensor.TYPE_LIGHT)!!
+        mLightSensor = mSensorManager.getDefaultSensor(Sensor.TYPE_LIGHT)
         mErrorText = findViewById(R.id.errorText)
         mErrorText.setOnClickListener {
             val intent = Intent(Settings.ACTION_MANAGE_WRITE_SETTINGS)
@@ -87,9 +88,11 @@ class MainActivity : SensorEventListener, AppCompatActivity()  {
     }
     override fun onResume() {
         super.onResume()
-        mSensorManager.registerListener(this, mLightSensor, SensorManager.SENSOR_DELAY_NORMAL)
-        mNeedToSetBrigtness = true
-        mBrightnessSlider.progress = brightnessToSeekBar( getBrightness() )
+        if ( mLightSensor != null ) {
+            mSensorManager.registerListener(this, mLightSensor, SensorManager.SENSOR_DELAY_NORMAL)
+            mNeedToSetBrigtness = true
+            mBrightnessSlider.progress = brightnessToSeekBar(getBrightness())
+        }
         updateGUI()
     }
 

@@ -17,20 +17,22 @@ class MainApplication : Application() {
         context = applicationContext
 
         val sensorManager = context.getSystemService(SENSOR_SERVICE) as SensorManager
-        val lightSensor = sensorManager.getDefaultSensor(Sensor.TYPE_LIGHT)!!
-        mNodeList = NodeList(lightSensor.maximumRange.toInt())
+        val lightSensor = sensorManager.getDefaultSensor(Sensor.TYPE_LIGHT)
+        if ( lightSensor != null ) {
+            mNodeList = NodeList(lightSensor.maximumRange.toInt())
 
-        createNotificationChannel(
-            SERVICE_NOTIFICATION_CHANNEL_ID,
-            R.string.service,
-            NotificationManager.IMPORTANCE_HIGH
-        )
+            createNotificationChannel(
+                SERVICE_NOTIFICATION_CHANNEL_ID,
+                R.string.service,
+                NotificationManager.IMPORTANCE_HIGH
+            )
 
-        val intent = Intent(context, MainService::class.java);
-        if (Build.VERSION.SDK_INT >= 26 )
-            context.startForegroundService(intent);
-        else
-            context.startService(intent);
+            val intent = Intent(context, MainService::class.java);
+            if (Build.VERSION.SDK_INT >= 26)
+                context.startForegroundService(intent)
+            else
+                context.startService(intent)
+        }
     }
 
     private fun createNotificationChannel(channelId: String, captionID: Int, importance: Int) {
