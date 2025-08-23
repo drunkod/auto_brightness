@@ -12,8 +12,12 @@
         android:icon="@mipmap/ic_launcher"
         android:label="@string/app_name"
         android:supportsRtl="true"
-        android:theme="@style/AppTheme"
+        android:theme="@style/NormalTheme"
         tools:targetApi="31">
+        <!-- Explicitly mark Android embedding v2 -->
+        <meta-data
+            android:name="flutterEmbedding"
+            android:value="2" />
 
         <activity
             android:name=".MainActivity"

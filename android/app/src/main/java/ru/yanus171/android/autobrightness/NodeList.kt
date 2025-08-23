@@ -1,7 +1,6 @@
 package ru.yanus171.android.autobrightness
 
 import android.content.Context
-import android.preference.PreferenceManager
 
 private const val NODE_LIST_PREF = "flutter.node_list5" // Note the 'flutter.' prefix added by the plugin
 private const val NODE_SEP = "|"
@@ -18,7 +17,7 @@ class NodeList(context: Context) {
     private var mList: MutableList<Node> = mutableListOf()
 
     init {
-        val settings = PreferenceManager.getDefaultSharedPreferences(context)
+        val settings = context.getSharedPreferences("FlutterSharedPreferences", Context.MODE_PRIVATE)
         val s = settings.getString(NODE_LIST_PREF, null)
         if (s != null) {
             for (item in s.split(NODE_SEP))
