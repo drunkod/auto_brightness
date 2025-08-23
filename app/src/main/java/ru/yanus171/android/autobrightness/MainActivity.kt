@@ -1,143 +1,78 @@
 package ru.yanus171.android.autobrightness
 
-import android.content.Intent
+import android.content.Context
 import android.hardware.Sensor
 import android.hardware.SensorEvent
 import android.hardware.SensorEventListener
 import android.hardware.SensorManager
-import android.os.Bundle
 import android.provider.Settings
-import android.view.View
-import android.view.Window
-import android.widget.Button
-import android.widget.ScrollView
-import android.widget.SeekBar
-import android.widget.SeekBar.OnSeekBarChangeListener
-import android.widget.TextView
-import android.widget.Toast
-import androidx.appcompat.app.AppCompatActivity
-import kotlin.math.sqrt
+import io.flutter.embedding.android.FlutterActivity
+import io.flutter.embedding.engine.FlutterEngine
+import io.flutter.plugin.common.EventChannel
+import io.flutter.plugin.common.MethodChannel
 
-const val MAX_BRIGHTNESS_SEEKBAR = 255.0
+class MainActivity : FlutterActivity(), SensorEventListener {
+    private val BRIGHTNESS_CHANNEL = "brightness_channel"
+    private val SENSOR_CHANNEL = "sensor_channel"
 
-class MainActivity : SensorEventListener, AppCompatActivity()  {
-    private val mSensorValue = SensorValue()
-    private lateinit var mSensorValueText: TextView
-    private lateinit var mBrightnessText: TextView
     private lateinit var mSensorManager: SensorManager
     private var mLightSensor: Sensor? = null
-    private lateinit var mBrightnessSlider: SeekBar
-    private lateinit var mNodeListText: TextView
-    private lateinit var mErrorText: TextView
-    private var mNeedToSetBrigtness = true
-    private var mIsUpdatingGUI = false
-    private var mIsNodeListVisible = false
+    private var sensorEventSink: EventChannel.EventSink? = null
 
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
-        requestWindowFeature(Window.FEATURE_NO_TITLE)
-        setContentView(R.layout.activity)
-        //window.addFlags(WindowManager.LayoutParams.FLAG_FORCE_NOT_FULLSCREEN )
-        mSensorManager = getSystemService(SENSOR_SERVICE) as SensorManager
-        mLightSensor = mSensorManager.getDefaultSensor(Sensor.TYPE_LIGHT)
-        mErrorText = findViewById(R.id.errorText)
-        mErrorText.setOnClickListener {
-            val intent = Intent(Settings.ACTION_MANAGE_WRITE_SETTINGS)
-            intent.setFlags( Intent.FLAG_ACTIVITY_NEW_TASK )
-            startActivity(intent)
-        }
-        mSensorValueText = findViewById(R.id.sensorData)
-        mBrightnessText = findViewById(R.id.brightness)
-        mBrightnessSlider = findViewById(R.id.seekbar)
-        mBrightnessSlider.setOnSeekBarChangeListener(object : OnSeekBarChangeListener {
-            override fun onProgressChanged(seekBar: SeekBar?, progress: Int, fromUser: Boolean) {
-                if ( mIsUpdatingGUI )
-                    return
-                setBrightness( seekBarToBrightness( seekBar!!.progress ) )
-                updateGUI()
-            }
-            override fun onStartTrackingTouch(seekBar: SeekBar?) {
-            }
-            override fun onStopTrackingTouch(seekBar: SeekBar?) {
-            }
-        } )
-        mNodeListText = findViewById(R.id.nodeListInfo)
-        mNodeListText.setOnClickListener {
-            mIsNodeListVisible = !mIsNodeListVisible
-            updateGUI()
-        }
-        findViewById<Button>(R.id.btnSave ).setOnClickListener {
-            MainApplication.mNodeList.set(mSensorValue.get(), getBrightness())
-            updateGUI()
-            Toast.makeText( this, R.string.nodeSaved, Toast.LENGTH_SHORT ).show()
-        }
-        findViewById<Button>(R.id.btnAuto ).setOnClickListener {
-            setBrightness( MainApplication.mNodeList.getBrightness( mSensorValue.get() ) )
-            updateGUI()
-            Toast.makeText( this, R.string.brightnessSetToAuto, Toast.LENGTH_SHORT ).show()
-        }
-        updateGUI()
-    }
-    private fun updateGUI() {
-        mIsUpdatingGUI = true
-        mNodeListText.text = if ( mIsNodeListVisible && mSensorValue.hasValue() ) MainApplication.mNodeList.getString( mSensorValue.toInt() ) else getString( R.string.showNodeList )
-        mBrightnessSlider.progress = brightnessToSeekBar( getBrightness() )
-        mBrightnessText.text = getString(R.string.brightness, getBrightness() )
-        mSensorValueText.text = getString(R.string.sensorData, mSensorValue)
-        mIsUpdatingGUI = false
-    }
-    override fun onResume() {
-        super.onResume()
-        if ( mLightSensor != null ) {
-            mSensorManager.registerListener(this, mLightSensor, SensorManager.SENSOR_DELAY_NORMAL)
-            mNeedToSetBrigtness = true
-            mBrightnessSlider.progress = brightnessToSeekBar(getBrightness())
-        }
-        updateGUI()
-    }
+    override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
+        super.configureFlutterEngine(flutterEngine)
 
-    override fun onPause() {
-        mSensorManager.unregisterListener( this )
-        super.onPause()
-    }
+        // Method Channel for Brightness
+        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, BRIGHTNESS_CHANNEL).setMethodCallHandler { call, result ->
+            when (call.method) {
+                "getBrightness" -> result.success(getBrightness())
+                "setBrightness" -> {
+                    val brightness = call.argument<Int>("brightness")
+                    if (brightness != null) {
+                        setBrightness(brightness)
+                        result.success(true)
+                    } else {
+                        result.error("INVALID_ARG", "Brightness argument is null", null)
+                    }
+                }
+                "hasWritePermission" -> result.success(Settings.System.canWrite(this))
+                else -> result.notImplemented()
+            }
+        }
 
+        // Event Channel for Light Sensor
+        EventChannel(flutterEngine.dartExecutor.binaryMessenger, SENSOR_CHANNEL).setStreamHandler(
+            object : EventChannel.StreamHandler {
+                override fun onListen(arguments: Any?, events: EventChannel.EventSink?) {
+                    sensorEventSink = events
+                    mSensorManager = context.getSystemService(Context.SENSOR_SERVICE) as SensorManager
+                    mLightSensor = mSensorManager.getDefaultSensor(Sensor.TYPE_LIGHT)
+                    mSensorManager.registerListener(this@MainActivity, mLightSensor, SensorManager.SENSOR_DELAY_NORMAL)
+                }
+
+                override fun onCancel(arguments: Any?) {
+                    mSensorManager.unregisterListener(this@MainActivity)
+                    sensorEventSink = null
+                }
+            }
+        )
+    }
 
     override fun onSensorChanged(event: SensorEvent?) {
-        if( event != null && event.sensor.type == Sensor.TYPE_LIGHT ) {
-            if ( !mSensorValue.ready( event ) )
-                return
-            if ( mNeedToSetBrigtness )
-                setBrightness(MainApplication.mNodeList.getBrightness(mSensorValue.get()) )
-            mNeedToSetBrigtness = false
-            updateGUI()
+        if (event?.sensor?.type == Sensor.TYPE_LIGHT) {
+            sensorEventSink?.success(event.values[0])
         }
     }
 
+    override fun onAccuracyChanged(sensor: Sensor?, accuracy: Int) {}
 
-    override fun onAccuracyChanged(sensor: Sensor?, accuracy: Int) {
-    }
-
-    fun getBrightness(): Int {
+    private fun getBrightness(): Int {
         return Settings.System.getInt(contentResolver, Settings.System.SCREEN_BRIGHTNESS, 128)
     }
 
-    fun setBrightness(value: Int) {
-        if ( Settings.System.canWrite(this) ) {
-            MainService.Companion.setBrightness( value )
-            mErrorText.text = ""
-            mErrorText.visibility = View.GONE
-        } else {
-            mErrorText.visibility = View.VISIBLE
-            mErrorText.text = getString(R.string.permissionNotGranted_WRITE_SETTINGS)
+    private fun setBrightness(value: Int) {
+        if (Settings.System.canWrite(this)) {
+            Settings.System.putInt(contentResolver, Settings.System.SCREEN_BRIGHTNESS, value)
         }
-    }
-
-    fun seekBarToBrightness( progress: Int ): Int {
-        return (((progress * progress) /  (MAX_BRIGHTNESS_SEEKBAR * MAX_BRIGHTNESS_SEEKBAR)) *
-                (MAX_BRIGHTNESS - MIN_BRIGHTNESS).toFloat() + MIN_BRIGHTNESS.toFloat()).toInt() + 1 // Approximate an exponential curve with x^2.
-    }
-    fun brightnessToSeekBar( brightness: Int ): Int {
-        return (sqrt(((brightness - MIN_BRIGHTNESS) / (MAX_BRIGHTNESS - MIN_BRIGHTNESS).toFloat())
-                * MAX_BRIGHTNESS_SEEKBAR * MAX_BRIGHTNESS_SEEKBAR)).toInt()
     }
 }
