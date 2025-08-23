@@ -14,7 +14,6 @@ import io.flutter.plugin.common.MethodChannel
 class MainActivity : FlutterActivity(), SensorEventListener {
     private val BRIGHTNESS_CHANNEL = "brightness_channel"
     private val SENSOR_CHANNEL = "sensor_channel"
-
     private lateinit var mSensorManager: SensorManager
     private var mLightSensor: Sensor? = null
     private var sensorEventSink: EventChannel.EventSink? = null
