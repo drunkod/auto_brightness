@@ -1,0 +1,511 @@
+--- a/app/build.gradle.kts
++++ b/app/build.gradle.kts
+@@ -46,3 +46,18 @@
+     //debugImplementation(libs.androidx.ui.test.manifest)
+ }
+
++--- a/app/src/main/kotlin/ru/yanus171/android/autobrightness/MainActivity.kt
+++++ b/app/src/main/kotlin/ru/yanus171/android/autobrightness/MainActivity.kt
+@@ -1,17 +1,33 @@
+ package ru.yanus171.android.autobrightness
+
++import android.content.Context
+ import android.content.Intent
+ import android.hardware.Sensor
+ import android.hardware.SensorEvent
+ import android.hardware.SensorEventListener
+ import android.hardware.SensorManager
+ import android.os.Bundle
++import android.provider.Settings
+ import android.provider.Settings.System
+ import android.view.View
+ import android.view.Window
+ import android.widget.Button
+-import android.widget.ScrollView
+ import android.widget.SeekBar
+ import android.widget.SeekBar.OnSeekBarChangeListener
+ import android.widget.TextView
+ import android.widget.Toast
+ import androidx.appcompat.app.AppCompatActivity
++import io.flutter.embedding.android.FlutterActivity
++import io.flutter.embedding.engine.FlutterEngine
++import io.flutter.plugin.common.EventChannel
++import io.flutter.plugin.common.MethodChannel
+ import kotlin.math.sqrt
+
+ const val MAX_BRIGHTNESS_SEEKBAR = 255.0
+
+-class MainActivity : SensorEventListener, AppCompatActivity()  {
++class MainActivity : FlutterActivity(), SensorEventListener {
+     private val mSensorValue = SensorValue()
+     private lateinit var mSensorValueText: TextView
+     private lateinit var mBrightnessText: TextView
+@@ -23,6 +39,9 @@
+     private var mNeedToSetBrigtness = true
+     private var mIsUpdatingGUI = false
+     private var mIsNodeListVisible = false
++    private val BRIGHTNESS_CHANNEL = "brightness_channel"
++    private val SENSOR_CHANNEL = "sensor_channel"
++    private var sensorEventSink: EventChannel.EventSink? = null
+
+     override fun onCreate(savedInstanceState: Bundle?) {
+         super.onCreate(savedInstanceState)
+@@ -82,6 +101,65 @@
+         updateGUI()
+     }
+
++    override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
++        super.configureFlutterEngine(flutterEngine)
++        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, BRIGHTNESS_CHANNEL).setMethodCallHandler { call, result ->
++            when (call.method) {
++                "getBrightness" -> {
++                    val brightness = Settings.System.getInt(contentResolver, Settings.System.SCREEN_BRIGHTNESS, 128)
++                    result.success(brightness)
++                }
++                "setBrightness" -> {
++                    val brightness = call.argument<Int>("brightness")!!
++                    if (Settings.System.canWrite(this)) {
++                        Settings.System.putInt(contentResolver, Settings.System.SCREEN_BRIGHTNESS, brightness)
++                        result.success(true)
++                    } else {
++                        result.success(false)
++                    }
++                }
++                "hasWritePermission" -> {
++                    result.success(Settings.System.canWrite(this))
++                }
++                else -> result.notImplemented()
++            }
++        }
++
++        EventChannel(flutterEngine.dartExecutor.binaryMessenger, SENSOR_CHANNEL).setStreamHandler(
++            object : EventChannel.StreamHandler {
++                override fun onListen(arguments: Any?, events: EventChannel.EventSink?) {
++                    sensorEventSink = events
++                    mSensorManager = getSystemService(Context.SENSOR_SERVICE) as SensorManager
++                    mLightSensor = mSensorManager.getDefaultSensor(Sensor.TYPE_LIGHT)
++                    mSensorManager.registerListener(this@MainActivity, mLightSensor, SensorManager.SENSOR_DELAY_NORMAL)
++                }
++
++                override fun onCancel(arguments: Any?) {
++                    sensorEventSink = null
++                    mSensorManager.unregisterListener(this@MainActivity)
++                }
++            }
++        )
++    }
++
+     override fun onResume() {
+         super.onResume()
+         if ( mLightSensor != null ) {
+@@ -99,6 +177,9 @@
+     override fun onSensorChanged(event: SensorEvent?) {
+         if( event != null && event.sensor.type == Sensor.TYPE_LIGHT ) {
+             if ( !mSensorValue.ready( event ) )
+                 return
++
++            sensorEventSink?.success(event.values[0])
++
+             if ( mNeedToSetBrigtness )
+                 setBrightness(MainApplication.mNodeList.getBrightness(mSensorValue.get()) )
+             mNeedToSetBrigtness = false
+@@ -131,3 +212,126 @@
+                 * MAX_BRIGHTNESS_SEEKBAR * MAX_BRIGHTNESS_SEEKBAR)).toInt()
+     }
+ }
++
++--- a/lib/main.dart
+++++ b/lib/main.dart
++import 'package:flutter/material.dart';
++import 'screens/main_screen.dart';
++
++void main() {
++  runApp(const MyApp());
++}
++
++class MyApp extends StatelessWidget {
++  const MyApp({super.key});
++
++  @override
++  Widget build(BuildContext context) {
++    return MaterialApp(
++      title: 'Auto Brightness',
++      theme: ThemeData(
++        primarySwatch: Colors.blue,
++      ),
++      home: const MainScreen(),
++    );
++  }
++}
++--- a/lib/models/node_list.dart
+++++ b/lib/models/node_list.dart
++import 'package:shared_preferences/shared_preferences.dart';
++
++class Node {
++  int brightness;
++  int sensorValue;
++
++  Node(this.sensorValue, this.brightness);
++
++  Node.fromString(String s)
++      : brightness = int.parse(s.split(';')[0]),
++        sensorValue = int.parse(s.split(';')[1]);
++
++  String save() => '$brightness;$sensorValue';
++  String getString() => 's=$sensorValue, b=$brightness';
++}
++
++class NodeList {
++  static const String NODE_LIST_PREF = 'node_list5';
++  static const int MAX_BRIGHTNESS = 255;
++  static const int MIN_BRIGHTNESS = 0;
++  static const int NODE_COUNT = 20;
++
++  List<Node> _list = [];
++
++  NodeList() {
++    _loadFromPreferences();
++  }
++
++  int getBrightness(int sensorValue) {
++    final node = _getNodeFor(sensorValue);
++    return node?.brightness ?? MAX_BRIGHTNESS;
++  }
++
++  Node? _getNodeFor(int sensorValue) {
++    for (final node in _list) {
++      if (sensorValue < node.sensorValue) {
++        return node;
++      }
++    }
++    return null;
++  }
++
++  void set(int sensorValue, int newBrightness) {
++    for (final node in _list) {
++      if (sensorValue < node.sensorValue) {
++        node.brightness = newBrightness;
++        _enforceConstraints(node);
++        break;
++      }
++    }
++    _save();
++  }
++
++  void _enforceConstraints(Node node) {
++    // Implementation similar to original makePrevNonesNotBrighterThen
++    // and makeNextNonesNotDarkerThen methods
++  }
++
++  String getString(int sensorValue) {
++    final currentNode = _getNodeFor(sensorValue);
++    return _list.map((node) {
++      final current = (currentNode?.sensorValue == node.sensorValue) ? '* ' : '';
++      return current + node.getString();
++    }).join('\n');
++  }
++
++  Future<void> _loadFromPreferences() async {
++    final prefs = await SharedPreferences.getInstance();
++    final nodeListString = prefs.getString(NODE_LIST_PREF);
++
++    if (nodeListString == null) {
++      _createDefaultList();
++    } else {
++      _list = nodeListString.split('|').map((item) => Node.fromString(item)).toList();
++    }
++  }
++
++  void _createDefaultList() {
++    _list.clear();
++    final bStep = MAX_BRIGHTNESS ~/ NODE_COUNT;
++    int b = 0;
++    int s = 10;
++
++    while (s < 1000) { // Assuming max sensor value
++      s = (s * 1.5).toInt();
++      b += bStep;
++      _list.add(Node(s, b));
++    }
++  }
++
++  Future<void> _save() async {
++    final prefs = await SharedPreferences.getInstance();
++    final nodeListString = _list.map((node) => node.save()).join('|');
++    await prefs.setString(NODE_LIST_PREF, nodeListString);
++  }
++}
++
++--- a/lib/models/sensor_value.dart
+++++ b/lib/models/sensor_value.dart
++class SensorValue {
++  static const int SENSOR_READ_DURATION_MS = 100;
++
++  DateTime? _readTimer;
++  List<int> _valueList = [];
++  int _value = -1;
++
++  int getValue() => _value;
++
++  bool ready(double sensorReading) {
++    _valueList.add(sensorReading.toInt());
++
++    if (_readTimer == null) {
++      _readTimer = DateTime.now();
++    } else if (_isReady()) {
++      _readTimer = DateTime.now();
++      _value = (_valueList.reduce((a, b) => a + b) / _valueList.length).toInt();
++      _valueList.clear();
++      return true;
++    }
++    return false;
++  }
++
++  bool _isReady() {
++    return _readTimer != null &&
++        DateTime.now().difference(_readTimer!).inMilliseconds > SENSOR_READ_DURATION_MS;
++  }
++
++  bool hasValue() => _value != -1;
++
++  @override
++  String toString() {
++    return hasValue() ? '$_value' : 'Calculating...';
++  }
++}
++
++--- a/lib/screens/main_screen.dart
+++++ b/lib/screens/main_screen.dart
++import 'package:flutter/material.dart';
++import '../services/brightness_service.dart';
++import '../services/sensor_service.dart';
++import '../models/sensor_value.dart';
++import '../models/node_list.dart';
++
++class MainScreen extends StatefulWidget {
++  const MainScreen({super.key});
++
++  @override
++  _MainScreenState createState() => _MainScreenState();
++}
++
++class _MainScreenState extends State<MainScreen> {
++  final SensorService _sensorService = SensorService();
++  final BrightnessService _brightnessService = BrightnessService();
++  final NodeList _nodeList = NodeList();
++  SensorValue _sensorValue = SensorValue();
++
++  double _currentBrightness = 128.0;
++  bool _isNodeListVisible = false;
++  bool _hasPermission = true;
++
++  @override
++  void initState() {
++    super.initState();
++    _sensorService.getSensorStream().listen((sensorReading) {
++      if (_sensorValue.ready(sensorReading)) {
++        setState(() {});
++      }
++    });
++    _brightnessService.getBrightness().then((brightness) {
++      setState(() {
++        _currentBrightness = brightness.toDouble();
++      });
++    });
++    _brightnessService.hasWritePermission().then((hasPermission) {
++      setState(() {
++        _hasPermission = hasPermission;
++      });
++    });
++  }
++
++  @override
++  Widget build(BuildContext context) {
++    return Scaffold(
++      body: SafeArea(
++        child: SingleChildScrollView(
++          child: Center(
++            child: Padding(
++              padding: const EdgeInsets.all(20.0),
++              child: Column(
++                children: [
++                  if (!_hasPermission)
++                    Container(
++                      padding: const EdgeInsets.all(10),
++                      color: Colors.red,
++                      child: const Text(
++                        'Write Settings permission not granted',
++                        style: TextStyle(color: Colors.white),
++                      ),
++                    ),
++                  GestureDetector(
++                    onTap: () {
++                      setState(() {
++                        _isNodeListVisible = !_isNodeListVisible;
++                      });
++                    },
++                    child: Container(
++                      padding: const EdgeInsets.all(10),
++                      child: Text(
++                        _isNodeListVisible ? _getNodeListString() : 'Show Node List',
++                        textAlign: TextAlign.center,
++                      ),
++                    ),
++                  ),
++                  Row(
++                    mainAxisAlignment: MainAxisAlignment.center,
++                    children: [
++                      ElevatedButton(
++                        onPressed: _setAutoBrightness,
++                        child: const Text('Auto'),
++                      ),
++                      const SizedBox(width: 10),
++                      ElevatedButton(
++                        onPressed: _saveCurrentMapping,
++                        child: const Text('Save'),
++                      ),
++                    ],
++                  ),
++                  const SizedBox(height: 20),
++                  Text(
++                    'Sensor Data: ${_sensorValue.toString()}',
++                    style: Theme.of(context).textTheme.bodyLarge,
++                  ),
++                  Text(
++                    'Brightness: ${_currentBrightness.toInt()}',
++                    style: Theme.of(context).textTheme.bodyLarge,
++                  ),
++                  Slider(
++                    value: _brightnessToSlider(_currentBrightness),
++                    min: 0,
++                    max: 255,
++                    divisions: 255,
++                    onChanged: _onSliderChanged,
++                  ),
++                ],
++              ),
++            ),
++          ),
++        ),
++      ),
++    );
++  }
++
++  double _brightnessToSlider(double brightness) {
++    return brightness; // Simplified for example
++  }
++
++  void _onSliderChanged(double value) {
++    setState(() {
++      _currentBrightness = value;
++    });
++    _brightnessService.setBrightness(value.toInt());
++  }
++
++  void _setAutoBrightness() {
++    if (_sensorValue.hasValue()) {
++      final brightness = _nodeList.getBrightness(_sensorValue.getValue());
++      setState(() {
++        _currentBrightness = brightness.toDouble();
++      });
++      _brightnessService.setBrightness(brightness);
++    }
++  }
++
++  void _saveCurrentMapping() {
++    if (_sensorValue.hasValue()) {
++      _nodeList.set(_sensorValue.getValue(), _currentBrightness.toInt());
++      ScaffoldMessenger.of(context).showSnackBar(
++        const SnackBar(content: Text('Node saved')),
++      );
++    }
++  }
++
++  String _getNodeListString() {
++    if (_sensorValue.hasValue()) {
++      return _nodeList.getString(_sensorValue.getValue());
++    }
++    return '';
++  }
++}
++
++--- a/lib/services/brightness_service.dart
+++++ b/lib/services/brightness_service.dart
++import 'package:flutter/services.dart';
++
++class BrightnessService {
++  static const MethodChannel _channel = MethodChannel('brightness_channel');
++
++  Future<int> getBrightness() async {
++    try {
++      final int brightness = await _channel.invokeMethod('getBrightness');
++      return brightness;
++    } catch (e) {
++      return 128; // Default brightness
++    }
++  }
++
++  Future<bool> setBrightness(int brightness) async {
++    try {
++      final bool result = await _channel.invokeMethod('setBrightness', {
++        'brightness': brightness,
++      });
++      return result;
++    } catch (e) {
++      return false;
++    }
++  }
++
++  Future<bool> hasWritePermission() async {
++    try {
++      final bool hasPermission = await _channel.invokeMethod('hasWritePermission');
++      return hasPermission;
++    } catch (e) {
++      return false;
++    }
++  }
++}
++
++--- a/lib/services/sensor_service.dart
+++++ b/lib/services/sensor_service.dart
++import 'dart:async';
++import 'package:flutter/services.dart';
++
++class SensorService {
++  static const EventChannel _sensorEventChannel = EventChannel('sensor_channel');
++  Stream<double>? _sensorStream;
++
++  Stream<double> getSensorStream() {
++    _sensorStream ??= _sensorEventChannel
++        .receiveBroadcastStream()
++        .map<double>((dynamic event) => event as double);
++    return _sensorStream!;
++  }
++}
++
++--- a/pubspec.yaml
+++++ b/pubspec.yaml
+@@ -1,6 +1,6 @@
+ name: auto_brightness
+ description: A new Flutter project.
+ publish_to: 'none'
+ version: 1.0.0+1
+
+ environment:
+-  sdk: '>=2.18.4 <3.0.0'
++  sdk: '>=3.0.0 <4.0.0'
+
+ dependencies:
+   flutter:
+     sdk: flutter
+   cupertino_icons: ^1.0.2
++  shared_preferences: ^2.0.15
+
+ dev_dependencies:
+   flutter_test:
+     sdk: flutter
+   flutter_lints: ^2.0.0
+
+ flutter:
+   uses-material-design: true
++
