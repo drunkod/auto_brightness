@@ -1,3 +1,5 @@
+import java.io.File
+
 pluginManagement {
     repositories {
         google {
@@ -19,6 +21,9 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "My Application"
+rootProject.name = "android"
 include(":app")
+
+val flutterProjectRoot = rootProject.projectDir.parentFile
+apply(from = File(flutterProjectRoot, "packages/flutter_tools/gradle/app_plugin_loader.gradle"))
  
