@@ -1,0 +1,1 @@
+ /home/user/auto_brightness/.dart_tool/flutter_build/7ec039580e0234a10a0a07dbd385c8ff/native_assets.json: 
