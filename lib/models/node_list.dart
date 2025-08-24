@@ -22,8 +22,18 @@ class NodeList {
 
   List<Node> _list = [];
 
+  // Legacy constructor keeps background async loading to avoid breaking callers,
+  // but prefer using `NodeList.load()` for explicit, awaited initialization.
   NodeList() {
     _loadFromPreferences();
+  }
+
+  NodeList._internal();
+
+  static Future<NodeList> load() async {
+    final nl = NodeList._internal();
+    await nl._loadFromPreferences();
+    return nl;
   }
 
   int getBrightness(int sensorValue) {
