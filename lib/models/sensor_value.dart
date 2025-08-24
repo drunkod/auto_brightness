@@ -1,5 +1,5 @@
 class SensorValue {
-  static const int SENSOR_READ_DURATION_MS = 100;
+  static const int sensorReadDurationMs = 100;
 
   DateTime? _readTimer;
   List<int> _valueList = [];
@@ -23,7 +23,7 @@ class SensorValue {
 
   bool _isReady() {
     return _readTimer != null &&
-        DateTime.now().difference(_readTimer!).inMilliseconds > SENSOR_READ_DURATION_MS;
+        DateTime.now().difference(_readTimer!).inMilliseconds > sensorReadDurationMs;
   }
 
   bool hasValue() => _value != -1;

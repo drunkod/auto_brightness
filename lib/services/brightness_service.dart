@@ -31,4 +31,14 @@ class BrightnessService {
       return false;
     }
   }
+
+  /// Opens the system screen to grant "Modify system settings" permission.
+  Future<bool> openWriteSettings() async {
+    try {
+      await _channel.invokeMethod('openWriteSettings');
+      return true;
+    } catch (e) {
+      return false;
+    }
+  }
 }
