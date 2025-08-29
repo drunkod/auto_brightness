@@ -9,13 +9,17 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
-  cupertino_icons: ^1.0.2
-  shared_preferences: ^2.0.15
+  # Consider updating to a more recent version
+  cupertino_icons: ^1.0.8
+  shared_preferences: ^2.5.3
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
-  flutter_lints: ^2.0.0
+  # Consider updating to a more recent version for better static analysis
+  flutter_lints: ^4.0.0
+  integration_test:
+    sdk: flutter
 
 flutter:
   uses-material-design: true

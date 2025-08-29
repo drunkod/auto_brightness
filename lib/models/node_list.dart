@@ -15,20 +15,30 @@ class Node {
 }
 
 class NodeList {
-  static const String NODE_LIST_PREF = 'node_list5';
-  static const int MAX_BRIGHTNESS = 255;
-  static const int MIN_BRIGHTNESS = 0;
-  static const int NODE_COUNT = 20;
+  static const String nodeListPref = 'node_list5';
+  static const int maxBrightness = 255;
+  static const int minBrightness = 0;
+  static const int nodeCount = 20;
 
   List<Node> _list = [];
 
+  // Legacy constructor keeps background async loading to avoid breaking callers,
+  // but prefer using `NodeList.load()` for explicit, awaited initialization.
   NodeList() {
     _loadFromPreferences();
   }
 
+  NodeList._internal();
+
+  static Future<NodeList> load() async {
+    final nl = NodeList._internal();
+    await nl._loadFromPreferences();
+    return nl;
+  }
+
   int getBrightness(int sensorValue) {
     final node = _getNodeFor(sensorValue);
-    return node?.brightness ?? MAX_BRIGHTNESS;
+    return node?.brightness ?? maxBrightness;
   }
 
   Node? _getNodeFor(int sensorValue) {
@@ -76,7 +86,7 @@ class NodeList {
 
   Future<void> _loadFromPreferences() async {
     final prefs = await SharedPreferences.getInstance();
-    final nodeListString = prefs.getString(NODE_LIST_PREF);
+    final nodeListString = prefs.getString(nodeListPref);
 
     if (nodeListString == null) {
       _createDefaultList();
@@ -87,7 +97,7 @@ class NodeList {
 
   void _createDefaultList() {
     _list.clear();
-    final bStep = MAX_BRIGHTNESS ~/ NODE_COUNT;
+    final bStep = maxBrightness ~/ nodeCount;
     int b = 0;
     int s = 10;
 
@@ -101,6 +111,6 @@ class NodeList {
   Future<void> _save() async {
     final prefs = await SharedPreferences.getInstance();
     final nodeListString = _list.map((node) => node.save()).join('|');
-    await prefs.setString(NODE_LIST_PREF, nodeListString);
+    await prefs.setString(nodeListPref, nodeListString);
   }
 }
